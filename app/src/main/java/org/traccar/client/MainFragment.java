@@ -21,6 +21,7 @@ import android.app.AlertDialog;
 import android.app.PendingIntent;
 import android.content.ComponentName;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.SharedPreferences.OnSharedPreferenceChangeListener;
@@ -28,7 +29,6 @@ import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
-import android.preference.CheckBoxPreference;
 import android.preference.EditTextPreference;
 import android.preference.Preference;
 import android.preference.PreferenceFragment;
@@ -43,9 +43,7 @@ import android.view.MenuItem;
 import android.webkit.URLUtil;
 import android.widget.Toast;
 
-import java.util.HashSet;
 import java.util.Random;
-import java.util.Set;
 
 public class MainFragment extends PreferenceFragment implements OnSharedPreferenceChangeListener {
 
@@ -61,9 +59,14 @@ public class MainFragment extends PreferenceFragment implements OnSharedPreferen
     public static final String KEY_ACCURACY = "accuracy";
     public static final String KEY_STATUS = "status";
 
+    //possible preferences to change in a remote-config request
+    public static final String[] PREFS_KEYS = {KEY_DEVICE, KEY_URL, KEY_INTERVAL, KEY_DISTANCE, KEY_ANGLE, KEY_ACCURACY};
+
     private static final int PERMISSIONS_REQUEST_LOCATION = 2;
 
     private SharedPreferences sharedPreferences;
+
+    private Preference mPrefDevice, mPrefUrl, mPrefInterval, mPrefDistance, mPrefAngle, mPrefAccuracy;
 
     private AlarmManager alarmManager;
     private PendingIntent alarmIntent;
@@ -79,31 +82,32 @@ public class MainFragment extends PreferenceFragment implements OnSharedPreferen
 
         sharedPreferences = PreferenceManager.getDefaultSharedPreferences(getActivity());
         addPreferencesFromResource(R.xml.preferences);
+
+        mPrefDevice = findPreference(KEY_DEVICE);
+        mPrefUrl = findPreference(KEY_URL);
+        mPrefInterval = findPreference(KEY_INTERVAL);
+        mPrefDistance = findPreference(KEY_DISTANCE);
+        mPrefAngle = findPreference(KEY_ANGLE);
+        mPrefAccuracy = findPreference(KEY_ACCURACY);
+
         initPreferences();
 
-        findPreference(KEY_DEVICE).setOnPreferenceChangeListener(new Preference.OnPreferenceChangeListener() {
+        mPrefDevice.setOnPreferenceChangeListener(new Preference.OnPreferenceChangeListener() {
             @Override
             public boolean onPreferenceChange(Preference preference, Object newValue) {
-                return newValue != null && !newValue.equals("");
+                if (newValue != null && !newValue.equals("")) {
+                    mPrefDevice.setSummary(newValue.toString());
+                    return true;
+                }
+                return false;
             }
         });
-        findPreference(KEY_URL).setOnPreferenceChangeListener(new Preference.OnPreferenceChangeListener() {
+        mPrefUrl.setOnPreferenceChangeListener(new Preference.OnPreferenceChangeListener() {
             @Override
             public boolean onPreferenceChange(Preference preference, Object newValue) {
-                return (newValue != null) && validateServerURL(newValue.toString());
-            }
-        });
-
-        findPreference(KEY_INTERVAL).setOnPreferenceChangeListener(new Preference.OnPreferenceChangeListener() {
-            @Override
-            public boolean onPreferenceChange(Preference preference, Object newValue) {
-                if (newValue != null) {
-                    try {
-                        int value = Integer.parseInt((String) newValue);
-                        return value > 0;
-                    } catch (NumberFormatException e) {
-                        Log.w(TAG, e);
-                    }
+                if (newValue != null && validateServerURL(newValue.toString())) {
+                    mPrefUrl.setSummary(newValue.toString());
+                    return true;
                 }
                 return false;
             }
@@ -115,6 +119,7 @@ public class MainFragment extends PreferenceFragment implements OnSharedPreferen
                 if (newValue != null) {
                     try {
                         int value = Integer.parseInt((String) newValue);
+                        preference.setSummary(newValue.toString());
                         return value >= 0;
                     } catch (NumberFormatException e) {
                         Log.w(TAG, e);
@@ -123,8 +128,23 @@ public class MainFragment extends PreferenceFragment implements OnSharedPreferen
                 return false;
             }
         };
-        findPreference(KEY_DISTANCE).setOnPreferenceChangeListener(numberValidationListener);
-        findPreference(KEY_ANGLE).setOnPreferenceChangeListener(numberValidationListener);
+
+        mPrefInterval.setOnPreferenceChangeListener(numberValidationListener);
+        mPrefDistance.setOnPreferenceChangeListener(numberValidationListener);
+        mPrefAngle.setOnPreferenceChangeListener(numberValidationListener);
+        mPrefAccuracy.setOnPreferenceChangeListener(new Preference.OnPreferenceChangeListener() {
+            @Override
+            public boolean onPreferenceChange(Preference preference, Object newValue) {
+                if (newValue != null && (newValue.equals("high") || newValue.equals("medium") || newValue.equals("low"))) {
+                    mPrefAccuracy.setSummary(newValue.toString());
+                    Toast.makeText(getActivity(), "New acc: " + newValue.toString(), Toast.LENGTH_LONG).show();
+                    return true;
+                }
+                return false;
+            }
+        });
+
+        processConfigIntent();
 
         alarmManager = (AlarmManager) getActivity().getSystemService(Context.ALARM_SERVICE);
         alarmIntent = PendingIntent.getBroadcast(getActivity(), 0, new Intent(getActivity(), AutostartReceiver.class), 0);
@@ -140,7 +160,7 @@ public class MainFragment extends PreferenceFragment implements OnSharedPreferen
         PackageManager packageManager = getActivity().getPackageManager();
         if (packageManager.getComponentEnabledSetting(componentName) != PackageManager.COMPONENT_ENABLED_STATE_DISABLED) {
             packageManager.setComponentEnabledSetting(
-                    componentName, PackageManager.COMPONENT_ENABLED_STATE_DISABLED, PackageManager.DONT_KILL_APP);
+                componentName, PackageManager.COMPONENT_ENABLED_STATE_DISABLED, PackageManager.DONT_KILL_APP);
 
             AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
             builder.setIcon(android.R.drawable.ic_dialog_alert);
@@ -163,12 +183,12 @@ public class MainFragment extends PreferenceFragment implements OnSharedPreferen
     }
 
     private void setPreferencesEnabled(boolean enabled) {
-        findPreference(KEY_DEVICE).setEnabled(enabled);
-        findPreference(KEY_URL).setEnabled(enabled);
-        findPreference(KEY_INTERVAL).setEnabled(enabled);
-        findPreference(KEY_DISTANCE).setEnabled(enabled);
-        findPreference(KEY_ANGLE).setEnabled(enabled);
-        findPreference(KEY_ACCURACY).setEnabled(enabled);
+        mPrefDevice.setEnabled(enabled);
+        mPrefUrl.setEnabled(enabled);
+        mPrefInterval.setEnabled(enabled);
+        mPrefDistance.setEnabled(enabled);
+        mPrefAngle.setEnabled(enabled);
+        mPrefAccuracy.setEnabled(enabled);
     }
 
     @Override
@@ -180,7 +200,7 @@ public class MainFragment extends PreferenceFragment implements OnSharedPreferen
                 stopTrackingService();
             }
         } else if (key.equals(KEY_DEVICE)) {
-            findPreference(KEY_DEVICE).setSummary(sharedPreferences.getString(KEY_DEVICE, null));
+            mPrefDevice.setSummary(sharedPreferences.getString(KEY_DEVICE, null));
         }
     }
 
@@ -210,7 +230,12 @@ public class MainFragment extends PreferenceFragment implements OnSharedPreferen
             sharedPreferences.edit().putString(KEY_DEVICE, id).apply();
             ((EditTextPreference) findPreference(KEY_DEVICE)).setText(id);
         }
-        findPreference(KEY_DEVICE).setSummary(sharedPreferences.getString(KEY_DEVICE, null));
+        mPrefDevice.setSummary(sharedPreferences.getString(KEY_DEVICE, null));
+        mPrefUrl.setSummary(sharedPreferences.getString(KEY_URL, null));
+        mPrefInterval.setSummary(sharedPreferences.getString(KEY_INTERVAL, null));
+        mPrefDistance.setSummary(sharedPreferences.getString(KEY_DISTANCE, null));
+        mPrefAngle.setSummary(sharedPreferences.getString(KEY_ANGLE, null));
+        mPrefAccuracy.setSummary(sharedPreferences.getString(KEY_ACCURACY, null));
     }
 
     private void startTrackingService(boolean checkPermission, boolean permission) {
@@ -229,7 +254,7 @@ public class MainFragment extends PreferenceFragment implements OnSharedPreferen
             setPreferencesEnabled(false);
             ContextCompat.startForegroundService(getActivity(), new Intent(getActivity(), TrackingService.class));
             alarmManager.setInexactRepeating(AlarmManager.ELAPSED_REALTIME_WAKEUP,
-                    ALARM_MANAGER_INTERVAL, ALARM_MANAGER_INTERVAL, alarmIntent);
+                ALARM_MANAGER_INTERVAL, ALARM_MANAGER_INTERVAL, alarmIntent);
         } else {
             sharedPreferences.edit().putBoolean(KEY_STATUS, false).apply();
             TwoStatePreference preference = (TwoStatePreference) findPreference(KEY_STATUS);
@@ -260,11 +285,45 @@ public class MainFragment extends PreferenceFragment implements OnSharedPreferen
     private boolean validateServerURL(String userUrl) {
         int port = Uri.parse(userUrl).getPort();
         if (URLUtil.isValidUrl(userUrl) && (port == -1 || (port > 0 && port <= 65535))
-                && (URLUtil.isHttpUrl(userUrl) || URLUtil.isHttpsUrl(userUrl))) {
+            && (URLUtil.isHttpUrl(userUrl) || URLUtil.isHttpsUrl(userUrl))) {
             return true;
         }
         Toast.makeText(getActivity(), R.string.error_msg_invalid_url, Toast.LENGTH_LONG).show();
         return false;
     }
 
+    private void processConfigIntent() {
+        Intent intent = getActivity().getIntent();
+        if (intent != null) {
+            Uri data = intent.getData();
+            if (data != null && !data.getQueryParameterNames().isEmpty()) {
+                String msg = "";
+                boolean allNulls = true;
+                final SharedPreferences.Editor editor = sharedPreferences.edit();
+                for (String key : PREFS_KEYS) {
+                    String val = data.getQueryParameter(key);
+                    if (val != null) {
+                        allNulls = false;
+                        msg += key + ": " + val + "\n";
+                        editor.putString(key, val);
+                        findPreference(key).setSummary(val);
+                    }
+                }
+                if (!allNulls) {
+                    AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
+                    builder.setIcon(android.R.drawable.ic_dialog_alert)
+                        .setTitle(R.string.dialog_title_settings_request)
+                        .setMessage(getString(R.string.dialog_msg_announce) + msg)
+                        .setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
+                            public void onClick(DialogInterface dialog, int id) {
+                                editor.commit();
+                                Toast.makeText(getActivity(), R.string.ok_settings_written, Toast.LENGTH_LONG).show();
+                            }
+                        })
+                        .setNegativeButton(android.R.string.cancel, null)
+                        .show();
+                }
+            }
+        }
+    }
 }

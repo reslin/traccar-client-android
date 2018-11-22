@@ -34,7 +34,10 @@ public class Position {
         altitude = location.getAltitude();
         speed = location.getSpeed() * 1.943844; // speed in knots
         course = location.getBearing();
-        if (location.getProvider() != null && !location.getProvider().equals(LocationManager.GPS_PROVIDER)) {
+        /*if (location.getProvider() != null && !location.getProvider().equals(LocationManager.GPS_PROVIDER)) {
+            accuracy = location.getAccuracy();
+        }*/
+        if(location.hasAccuracy()){
             accuracy = location.getAccuracy();
         }
         this.battery = battery;

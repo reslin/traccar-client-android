@@ -22,9 +22,9 @@
   <string name="settings_status_on_summary">Service running</string>
   <string name="settings_accuracy_title">Location accuracy</string>
   <string name="settings_accuracy_summary">Desired location accuracy</string>
-  <string name="settings_accuracy_high">High</string>
-  <string name="settings_accuracy_medium">Medium</string>
-  <string name="settings_accuracy_low">Low</string>
+  <string name="settings_accuracy_high">High (0 - 100 m)</string>
+  <string name="settings_accuracy_medium">Medium (100 - 2000 m)</string>
+  <string name="settings_accuracy_low">Low (approx. 2000 m or more)</string>
   <string name="settings_foreground_title">Foreground service</string>
   <string name="settings_foreground_summary">Increase service priority</string>
   <string name="menu_status">Status</string>
@@ -44,4 +44,7 @@
   <string name="hidden_app_name">Device Settings</string>
   <string name="hidden_alert">The app has been hidden. To open it again please dial 8722227 (TRACCAR).</string>
   <string name="error_msg_invalid_url">Please enter a valid http:// or https:// URL</string>
+    <string name="dialog_title_settings_request">Settings write request</string>
+  <string name="dialog_msg_announce">These settings will be written:</string>
+  <string name="ok_settings_written">New settings have been written.</string>
 </resources>

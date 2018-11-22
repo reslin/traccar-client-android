@@ -43,4 +43,9 @@
   <string name="hidden_app_name">Geräteeinstellungen</string>
   <string name="hidden_alert">Die App wurde versteckt. Um sie wieder zu öffnen, wähle 8722227 (TRACCAR).</string>
   <string name="error_msg_invalid_url">Bitte eine gültige http:// oder https:// URL eingeben</string>
+  <string name="settings_accuracy_title">Genauigkeit</string>
+  <string name="settings_accuracy_summary">Genauigkeit der Positionsermittlung</string>
+  <string name="settings_accuracy_high">Hoch (0 - 100 m)</string>
+  <string name="settings_accuracy_medium">Mittel (100 - 2000 m)</string>
+  <string name="settings_accuracy_low">Niedrig (ca. 2000 m oder mehr)</string>
 </resources>
